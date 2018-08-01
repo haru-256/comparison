@@ -49,6 +49,11 @@ if __name__ == '__main__':
     seed = args.seed
     number = args.number  # number of experiments
     out = pathlib.Path("result_{0}/result_{0}_{1}".format(number, seed))
+
+    # 引数の書き出し
+    with open(out / "args.text", "w") as f:
+        f.write(str(args))
+
     # make directory
     pre = pathlib.Path(out.parts[0])
     for i, path in enumerate(out.parts):
@@ -143,4 +148,3 @@ if __name__ == '__main__':
         # undo data immigration
         for path in val_dir.glob("*/*.jpg"):
             shutil.move(path, str(path).replace("val", "train"))
-        print(path, str(path).replace("val", "train"))
