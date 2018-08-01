@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
     try:
         # data immigration for validation data
-        val_dir, val_data_path = make_validation_dataset(
+        val_dir, _ = make_validation_dataset(
             data_dir, seed=seed, test_size=args.val_size)
 
         # transform
@@ -136,9 +136,11 @@ if __name__ == '__main__':
         # save best model
         torch.save(best_model.state_dict(), out / "best_model.pt")
 
-    except Exception:
-        pass
+    except Exception as error:
+        import traceback
+        traceback.print_exc()
     finally:
         # undo data immigration
-        for original_path, path in zip(val_data_path, val_dir.glob("*/*.jpg")):
-            shutil.move(path, original_path)
+        for path in val_dir.glob("*/*.jpg"):
+            shutil.move(path, str(path).replace("val", "train"))
+        print(path, str(path).replace("val", "train"))

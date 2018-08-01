@@ -147,10 +147,15 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
         model.eval()
         testloader = torch.utils.data.DataLoader(datasets["test"], batch_size=batch_size,
                                                  shuffle=False, num_workers=2)
+        iteration = tqdm(testloader,
+                         desc="Test iteration",
+                         unit='iter')
         test_loss = 0.0
         test_acc = 0
         with torch.no_grad():
-            for inputs, labels in testloader:
+            for inputs, labels in iteration:
+                inputs, labels = inputs.to(device), labels.to(device)
+
                 outputs = model(inputs)
                 _, preds = torch.max(outputs.data, 1)
                 # returns loss is mean_wise
@@ -162,7 +167,7 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
         test_loss = test_loss / len(datasets["test"])
         test_acc = test_acc.double() / len(datasets["test"])
         tqdm.write('Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
-            "Test", epoch_loss, epoch_acc))
+            "Test", test_loss, test_acc))
 
     return model
 
