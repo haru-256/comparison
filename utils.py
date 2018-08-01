@@ -144,6 +144,7 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
 
     # if test set exists, calculate loss and accuracy for best model
     if "test" in datasets:
+        model.eval()
         testloader = torch.utils.data.DataLoader(datasets["test"], batch_size=batch_size,
                                                  shuffle=False, num_workers=2)
         test_loss = 0.0

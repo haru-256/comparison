@@ -62,7 +62,7 @@ if __name__ == '__main__':
     print('GPU: {}'.format(gpu))
     print('# Minibatch-size: {}'.format(batch_size))
     print('# epoch: {}'.format(epoch))
-    print('# val size: {}'.format(argparse.val_size))
+    print('# val size: {}'.format(args.val_size))
     print('# out: {}'.format(out))
 
     if gpu == 0:
@@ -108,6 +108,10 @@ if __name__ == '__main__':
         image_datasets = {x: datasets.ImageFolder(data_dir / x,
                                                   transform=data_transform[x])
                           for x in ['train', 'val', 'test']}
+
+        print("Train Dataset Size:", len(image_datasets['train']))
+        print("Validation Dataset Size:", len(image_datasets['val']))
+        print("Test Dataset Size:", len(image_datasets['test']))
 
         # load resnet18 trained for ImageNet.
         model_ft = models.resnet18(pretrained=True)
