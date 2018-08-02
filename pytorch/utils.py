@@ -85,7 +85,7 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
                   for phase in ['train', 'val']}
     dataset_sizes = {phase: len(datasets[phase]) for phase in ['train', 'val']}
     # initialize log
-    line = OrderedDict()
+    log = OrderedDict()
     # train loop
     since = datetime.datetime.now()
     for epoch in epochs:
