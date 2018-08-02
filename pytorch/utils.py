@@ -127,7 +127,7 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
                 train_acc += torch.sum(preds == labels.data)
 
             epoch_loss = train_loss / dataset_sizes[phase]
-            epoch_acc = train_acc.double() / dataset_sizes[phase]
+            epoch_acc = train_acc.double().item() / dataset_sizes[phase]
             tqdm.write('Epoch: {} Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
                 epoch, phase.capitalize(), epoch_loss, epoch_acc))
 
@@ -178,7 +178,7 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
                 test_acc += torch.sum(preds == labels.data)
 
         test_loss = test_loss / len(datasets["test"])
-        test_acc = test_acc.double() / len(datasets["test"])
+        test_acc = test_acc.double().item() / len(datasets["test"])
         tqdm.write("{} {}".format(test_loss, test_acc))
         tqdm.write('Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
             "Test", test_loss, test_acc))
@@ -187,7 +187,7 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
                                   test_acc=test_acc)
 
     # save log
-    with open(out / "log.json") as f:
+    with open(out / "log.json", "w") as f:
         json.dump(log, f, indent=4, separators=(',', ': '))
 
     return model
