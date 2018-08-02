@@ -128,17 +128,17 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
 
             epoch_loss = train_loss / dataset_sizes[phase]
             epoch_acc = train_acc.double().item() / dataset_sizes[phase]
-            tqdm.write('Epoch: {} Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
-                epoch, phase.capitalize(), epoch_loss, epoch_acc))
+            tqdm.write('Epoch: {:3d} Phase: {:>5}    Loss: {:.4f} Acc: {:.4f}'.format(
+                epoch+1, phase.capitalize(), epoch_loss, epoch_acc))
 
             if phase == 'train':
                 # preserve train log
-                log["epoch_{}".format(epoch)] = OrderedDict(train_loss=epoch_loss,
-                                                            train_acc=epoch_acc)
+                log["epoch_{}".format(epoch+1)] = OrderedDict(train_loss=epoch_loss,
+                                                              train_acc=epoch_acc)
             elif phase == 'val':
                 # preserve val log
-                log["epoch_{}".format(epoch)].update(OrderedDict(val_loss=epoch_loss,
-                                                                 val_acc=epoch_acc))
+                log["epoch_{}".format(epoch+1)].update(OrderedDict(val_loss=epoch_loss,
+                                                                   val_acc=epoch_acc))
                 if epoch_acc > best_acc:
                     # deep copy the model
                     best_acc = epoch_acc
@@ -146,11 +146,11 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
 
         # save model by epoch
         torch.save(model.state_dict(), out / "model_{}epoch.pt".format(epoch))
-        tqdm.write("-"*50)
+        tqdm.write("-"*60)
 
     time_elapsed = datetime.datetime.now() - since
     tqdm.write('Training complete in {}'.format(time_elapsed))
-    tqdm.write('Best val Acc: {:4f}'.format(best_acc))
+    tqdm.write('Best val Acc: {:4f}'.format(best_acc), end="\n\n")
 
     # load best model weights
     model.load_state_dict(best_model_wts)
@@ -179,9 +179,8 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
 
         test_loss = test_loss / len(datasets["test"])
         test_acc = test_acc.double().item() / len(datasets["test"])
-        tqdm.write("{} {}".format(test_loss, test_acc))
         tqdm.write('Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
-            "Test", test_loss, test_acc))
+            "Test", test_loss, test_acc), end="\n\n")
         # preserve test log
         log['test'] = OrderedDict(test_loss=test_loss,
                                   test_acc=test_acc)
@@ -240,7 +239,7 @@ def make_validation_dataset(data_dir, seed=None, test_size=0.25):
 
         # 画像ファイルの移動
         shutil.move(path, val_dir / "/".join(path.parts[-2:]))
-    print("Done")
+    print("Done!!", end="\n\n")
 
     return val_dir, val_data_path
 

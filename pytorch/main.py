@@ -70,7 +70,7 @@ if __name__ == '__main__':
     print('# Minibatch-size: {}'.format(batch_size))
     print('# epoch: {}'.format(epoch))
     print('# val size: {}'.format(args.val_size))
-    print('# out: {}'.format(out))
+    print('# out: {}'.format(out), end="\n\n")
 
     if gpu == 0:
         device = torch.device("cuda:0")
@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
         print("Train Dataset Size:", len(image_datasets['train']))
         print("Validation Dataset Size:", len(image_datasets['val']))
-        print("Test Dataset Size:", len(image_datasets['test']))
+        print("Test Dataset Size:", len(image_datasets['test']), end="\n\n")
 
         # load resnet18 trained for ImageNet.
         model_ft = models.resnet18(pretrained=True)
@@ -148,7 +148,9 @@ if __name__ == '__main__':
         traceback.print_exc()
     finally:
         # undo data immigration
+        print("Undo data immigration")
         for path in val_dir.glob("*/*.jpg"):
             shutil.move(path, str(path).replace("val", "train"))
+        print("Done!!", end="\n\n")
 
     print("Wall-Time:", datetime.datetime.now() - scine)
