@@ -78,7 +78,7 @@ if __name__ == '__main__':
         device = torch.device("cpu")
 
     # path to data directory
-    data_dir = pathlib.Path('../data/food-101/images').resolve()
+    data_dir = pathlib.Path('../../data/food-101/images').resolve()
 
     try:
         # data immigration for validation data
