@@ -15,6 +15,7 @@ import shutil
 from sklearn import model_selection
 import pandas
 from collections import OrderedDict
+import json
 
 
 # custom weights initialization
@@ -56,7 +57,7 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
         optimizer for model
 
     criterion: torch.nn.Module
-        function that calculates loss 
+        function that calculates loss
 
     num_epochs: int
         number of epochs
@@ -129,16 +130,23 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
             epoch_acc = train_acc.double() / dataset_sizes[phase]
             tqdm.write('Epoch: {} Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
                 epoch, phase.capitalize(), epoch_loss, epoch_acc))
+
             if phase == 'train':
-                line["epoch_{}".format(epoch)]
-            # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
+                # preserve train log
+                log["epoch_{}".format(epoch)] = OrderedDict(train_loss=epoch_loss,
+                                                            train_acc=epoch_acc)
+            elif phase == 'val':
+                # preserve val log
+                log["epoch_{}".format(epoch)].update(OrderedDict(val_loss=epoch_loss,
+                                                                 val_acc=epoch_acc))
+                if epoch_acc > best_acc:
+                    # deep copy the model
+                    best_acc = epoch_acc
+                    best_model_wts = copy.deepcopy(model.state_dict())
 
         # save model by epoch
         torch.save(model.state_dict(), out / "model_{}epoch.pt".format(epoch))
-        tqdm.write("")
+        tqdm.write("-"*50)
 
     time_elapsed = datetime.datetime.now() - since
     tqdm.write('Training complete in {}'.format(time_elapsed))
@@ -174,6 +182,13 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
         tqdm.write("{} {}".format(test_loss, test_acc))
         tqdm.write('Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
             "Test", test_loss, test_acc))
+        # preserve test log
+        log['test'] = OrderedDict(test_loss=test_loss,
+                                  test_acc=test_acc)
+
+    # save log
+    with open(out / "log.json") as f:
+        json.dump(log, f, indent=4, separators=(',', ': '))
 
     return model
 
@@ -228,3 +243,30 @@ def make_validation_dataset(data_dir, seed=None, test_size=0.25):
     print("Done")
 
     return val_dir, val_data_path
+
+
+def log_report(log, epoch, isTrain, **kwards):
+    """
+    make Oderdict object that contains log (e.g. train_loss, train_acc, val_train, val_test)
+
+    Parameters
+    -----------------------
+    log: Oderdict
+        Oderdict object that contains log
+
+    epoch: int
+        epoch
+
+    isTrain: boolean
+        whether mode is train or test
+
+    **kwards
+        parameters are pass to OderDict's constractor
+
+    Returns
+    ----------------------
+    log: Oderdict
+        Oderdict object that contains log
+    """
+
+    pass
