@@ -160,12 +160,13 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
                 _, preds = torch.max(outputs.data, 1)
                 # returns loss is mean_wise
                 loss = criterion(outputs, labels)
-            # statistics
-            test_loss += loss.item() * inputs.size(0)
-            test_acc += torch.sum(preds == labels.data)
+                # statistics
+                test_loss += loss.item() * inputs.size(0)
+                test_acc += torch.sum(preds == labels.data)
 
         test_loss = test_loss / len(datasets["test"])
         test_acc = test_acc.double() / len(datasets["test"])
+        tqdm.write("{} {}".format(test_loss, test_acc))
         tqdm.write('Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
             "Test", test_loss, test_acc))
 

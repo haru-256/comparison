@@ -12,9 +12,11 @@ from utils import train_model, weights_init, make_validation_dataset
 from sklearn import model_selection
 import pandas
 import shutil
+import datetime
 
 
 if __name__ == '__main__':
+    scine = datetime.datetime.now()
     # make parser
     parser = argparse.ArgumentParser(
         prog='classify mnist',
@@ -50,10 +52,6 @@ if __name__ == '__main__':
     number = args.number  # number of experiments
     out = pathlib.Path("result_{0}/result_{0}_{1}".format(number, seed))
 
-    # 引数の書き出し
-    with open(out / "args.text", "w") as f:
-        f.write(str(args))
-
     # make directory
     pre = pathlib.Path(out.parts[0])
     for i, path in enumerate(out.parts):
@@ -63,6 +61,10 @@ if __name__ == '__main__':
         if not pre.exists():
             pre.mkdir()
         pre = path
+
+    # 引数の書き出し
+    with open(out / "args.text", "w") as f:
+        f.write(str(args))
 
     print('GPU: {}'.format(gpu))
     print('# Minibatch-size: {}'.format(batch_size))
@@ -148,3 +150,5 @@ if __name__ == '__main__':
         # undo data immigration
         for path in val_dir.glob("*/*.jpg"):
             shutil.move(path, str(path).replace("val", "train"))
+
+    print("Wall-Time:", datetime.datetime.now() - scine)
