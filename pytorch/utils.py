@@ -14,6 +14,7 @@ import numpy as np
 import shutil
 from sklearn import model_selection
 import pandas
+from collections import OrderedDict
 
 
 # custom weights initialization
@@ -82,6 +83,8 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
                                                      shuffle=(phase == 'train'), num_workers=2)
                   for phase in ['train', 'val']}
     dataset_sizes = {phase: len(datasets[phase]) for phase in ['train', 'val']}
+    # initialize log
+    line = OrderedDict()
     # train loop
     since = datetime.datetime.now()
     for epoch in epochs:
@@ -126,6 +129,8 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
             epoch_acc = train_acc.double() / dataset_sizes[phase]
             tqdm.write('Epoch: {} Phase: {} Loss: {:.4f} Acc: {:.4f}'.format(
                 epoch, phase.capitalize(), epoch_loss, epoch_acc))
+            if phase == 'train':
+                line["epoch_{}".format(epoch)]
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
