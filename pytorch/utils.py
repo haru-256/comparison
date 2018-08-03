@@ -145,7 +145,8 @@ def train_model(model, datasets, optimizer, criterion, num_epochs=30, batch_size
                     best_model_wts = copy.deepcopy(model.state_dict())
 
         # save model by epoch
-        torch.save(model.state_dict(), out / "model_{}epoch.pt".format(epoch))
+        torch.save(model.state_dict(), out /
+                   "model_{}epoch.pt".format(epoch+1))
         tqdm.write("-"*60)
 
     time_elapsed = datetime.datetime.now() - since
