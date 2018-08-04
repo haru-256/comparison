@@ -4,6 +4,8 @@ from chainer.training import extensions
 import chainer.links as L
 from chainer import initializers
 import argparse
+from chainer import training
+from chainer import optimizers
 
 if __name__ == '__main__'
 # make parser
@@ -61,13 +63,6 @@ if __name__ == '__main__'
     print('# val size: {}'.format(args.val_size))
     print('# out: {}'.format(out))
 
-    if gpu == 0:
-        device = torch.device("cuda:0")
-    elif gpu == 1:
-        device = torch.device("cuda:1")
-    else:
-        device = torch.device("cpu")
-
     # path to a text file contains paths/labels pairs in distinct lines.
     train_file_path = pathlib.Path('train_path.txt').resolve()
     test_file_path = pathlib.Path('test_path.txt').resolve()
@@ -89,7 +84,25 @@ if __name__ == '__main__'
         model = chainer.links.VGG16Layers()
         num_ftrs = model.fc8.out_size
         model.fc8 = L.Linear(in_size=None, out_size=101,
-                             initialW=initializers.Normal(scale=0.02))
+                             initialW=initializers.Normal(scale=0.02),
+                             initial_bias=initializers.Normal(scale=0.02))
+        model = L.Classifier(model)
+
+        if gpu >= 0:
+            # Make a specified GPU current
+            chainer.backends.cuda.get_device_from_id(gpu).use()
+            model.to_gpu()  # Copy the model to the GPU
+
+        # make Optimizer
+        optimizer = optimizers.MomentumSGD(lr=0.001, momentum=0.9)
+        # Give the optimizer a reference to the model
+        optimizer.setup(model)
+
+        # Set up a updater & trainer
+        updater = training.updaters.StandardUpdater(
+            iterator=train_iter, optimizer=optimizer, device=device)
+        trainer = training.Trainer(updater, (epoch, 'epoch'), out=out)
+
     except:
         Exception
         import traceback
