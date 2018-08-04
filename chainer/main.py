@@ -3,6 +3,10 @@ from chainer import training
 from chainer.training import extensions
 import chainer.links as L
 from chainer import initializers
+from chainer import training
+from chainer.training import updaters
+from chainer import optimizers
+from chainer.training import extensions
 import argparse
 
 if __name__ == '__main__'
@@ -89,7 +93,36 @@ if __name__ == '__main__'
         model = chainer.links.VGG16Layers()
         num_ftrs = model.fc8.out_size
         model.fc8 = L.Linear(in_size=None, out_size=101,
-                             initialW=initializers.Normal(scale=0.02))
+                             initialW=initializers.Normal(scale=0.02),
+                             initial_bias=initializers.Normal(scale=0.02))
+        model = L.Classifier(model)
+
+        # make optimizer
+        optimizer = optimizers.MomentumSGD(lr=0.001, momentum=0.9)
+        optimizer.setup(model)
+        # make updater & set up trainer
+        updater = updaters.StandardUpdater(
+            train_iter, optimizer, device=device)
+        trainer = training.Trainer(
+            updater, stop_trigger=(epoch, 'epoch'), out=out)
+
+        trainer.extend(extensions.LogReport())
+        trainer.extend(extensions.snapshot(
+            filename='snapshot_epoch-{.updater.epoch}'))
+        trainer.extend(extensions.snapshot_object(
+            model.predictor, filename='model_epoch-{.updater.epoch}'))
+        trainer.extend(extensions.Evaluator(test_iter, model, device=device))
+        trainer.extend(extensions.PrintReport(
+            ['epoch', 'main/loss', 'main/accuracy', 'validation/main/loss', 'validation/main/accuracy', 'elapsed_time']))
+        trainer.extend(extensions.PlotReport(
+            ['main/loss', 'validation/main/loss'], x_key='epoch', file_name='loss.png'))
+        trainer.extend(extensions.PlotReport(
+            ['main/accuracy', 'validation/main/accuracy'], x_key='epoch', file_name='accuracy.png'))
+        trainer.extend(extensions.dump_graph('main/loss'))
+
+        # run trainning
+        trainer.run()
+
     except:
         Exception
         import traceback
