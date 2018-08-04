@@ -3,6 +3,10 @@ from chainer import training
 from chainer.training import extensions
 import chainer.links as L
 from chainer import initializers
+from chainer import training
+from chainer.training import updaters
+from chainer import optimizers
+from chainer.training import extensions
 import argparse
 from chainer import training
 from chainer import optimizers
@@ -93,15 +97,31 @@ if __name__ == '__main__'
             chainer.backends.cuda.get_device_from_id(gpu).use()
             model.to_gpu()  # Copy the model to the GPU
 
-        # make Optimizer
+        # make optimizer
         optimizer = optimizers.MomentumSGD(lr=0.001, momentum=0.9)
-        # Give the optimizer a reference to the model
         optimizer.setup(model)
+        # make updater & set up trainer
+        updater = updaters.StandardUpdater(
+            train_iter, optimizer, device=device)
+        trainer = training.Trainer(
+            updater, stop_trigger=(epoch, 'epoch'), out=out)
 
-        # Set up a updater & trainer
-        updater = training.updaters.StandardUpdater(
-            iterator=train_iter, optimizer=optimizer, device=device)
-        trainer = training.Trainer(updater, (epoch, 'epoch'), out=out)
+        trainer.extend(extensions.LogReport())
+        trainer.extend(extensions.snapshot(
+            filename='snapshot_epoch-{.updater.epoch}'))
+        trainer.extend(extensions.snapshot_object(
+            model.predictor, filename='model_epoch-{.updater.epoch}'))
+        trainer.extend(extensions.Evaluator(test_iter, model, device=device))
+        trainer.extend(extensions.PrintReport(
+            ['epoch', 'main/loss', 'main/accuracy', 'validation/main/loss', 'validation/main/accuracy', 'elapsed_time']))
+        trainer.extend(extensions.PlotReport(
+            ['main/loss', 'validation/main/loss'], x_key='epoch', file_name='loss.png'))
+        trainer.extend(extensions.PlotReport(
+            ['main/accuracy', 'validation/main/accuracy'], x_key='epoch', file_name='accuracy.png'))
+        trainer.extend(extensions.dump_graph('main/loss'))
+
+        # run trainning
+        trainer.run()
 
     except:
         Exception
