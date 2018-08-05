@@ -10,9 +10,15 @@ from chainer.training import extensions
 import argparse
 from chainer import training
 from chainer import optimizers
+from chainercv import transforms
+import pathlib
+import shutil
+from utils import make_validation_dataset, PytorchLike_LabeledImageDataset
+import datetime
 
-if __name__ == '__main__'
-# make parser
+if __name__ == '__main__':
+    scine = datetime.datetime.now()
+    # make parser
     parser = argparse.ArgumentParser(
         prog='classify mnist',
         usage='python train.py',
@@ -67,17 +73,46 @@ if __name__ == '__main__'
     print('# val size: {}'.format(args.val_size))
     print('# out: {}'.format(out))
 
-    # path to a text file contains paths/labels pairs in distinct lines.
-    train_file_path = pathlib.Path('train_path.txt').resolve()
-    test_file_path = pathlib.Path('test_path.txt').resolve()
+    data_dir = pathlib.Path('../../data/food-101/images').resolve()
+    train_dir_path = data_dir / 'train'
+    test_dir_path = data_dir / 'test'
 
     try:
         # data immigration for validation data
-        val_dir, _ = make_validation_dataset(
+        val_dir_path, _ = make_validation_dataset(
             data_dir, seed=seed, test_size=args.val_size)
         # load datasets
-        train_datasets = chainer.datasets.LabeledImageDataset(train_file_path)
-        test_datasets = chainer.datasets.LabeledImageDataset(test_file_path)
+        train_transform_list = [
+            transforms.random_sized_crop,
+            transforms.resize
+        ]
+        train_param_list = [
+            {},
+            {"size": 224}
+        ]
+        val_transform_list = [
+            transforms.resize,
+            transforms.center_crop
+        ]
+        val_param_list = [
+            {"size": 256},
+            {"size": 224}
+        ]
+        test_transform_list = [
+            transforms.resize,
+            transforms.center_crop
+        ]
+        test_param_list = [
+            {"size": 256},
+            {"size": 224}
+        ]
+        train_datasets = PytorchLike_LabeledImageDataset(
+            dir_path=train_dir_path, transform_list=train_transform_list, param_list=train_param_list)
+        val_datasets = PytorchLike_LabeledImageDataset(
+            dir_path=val_dir_path, transform_list=val_transform_list, param_list=val_param_list)
+        test_datasets = PytorchLike_LabeledImageDataset(
+            dir_path=test_dir_path, transform_list=test_transform_list, param_list=test_param_list)
+
         # make iterator
         train_iter = chainer.iterators.SerialIterator(
             train_datasets, batch_size)
@@ -100,9 +135,10 @@ if __name__ == '__main__'
         # make optimizer
         optimizer = optimizers.MomentumSGD(lr=0.001, momentum=0.9)
         optimizer.setup(model)
+
         # make updater & set up trainer
         updater = updaters.StandardUpdater(
-            train_iter, optimizer, device=device)
+            train_iter, optimizer, device=gpu)
         trainer = training.Trainer(
             updater, stop_trigger=(epoch, 'epoch'), out=out)
 
@@ -111,7 +147,7 @@ if __name__ == '__main__'
             filename='snapshot_epoch-{.updater.epoch}'))
         trainer.extend(extensions.snapshot_object(
             model.predictor, filename='model_epoch-{.updater.epoch}'))
-        trainer.extend(extensions.Evaluator(test_iter, model, device=device))
+        trainer.extend(extensions.Evaluator(test_iter, model, device=gpu))
         trainer.extend(extensions.PrintReport(
             ['epoch', 'main/loss', 'main/accuracy', 'validation/main/loss', 'validation/main/accuracy', 'elapsed_time']))
         trainer.extend(extensions.PlotReport(
@@ -129,5 +165,9 @@ if __name__ == '__main__'
         traceback.print_exc()
     finally:
         # undo data immigration
-        for path in val_dir.glob("*/*.jpg"):
+        print("Undo data immigration")
+        for path in val_dir_path.glob("*/*.jpg"):
             shutil.move(path, str(path).replace("val", "train"))
+        print("Done!!", end="\n\n")
+
+    print("Wall-Time:", datetime.datetime.now() - scine)
