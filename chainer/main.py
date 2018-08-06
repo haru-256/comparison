@@ -13,7 +13,7 @@ from chainer import optimizers
 from chainercv import transforms
 import pathlib
 import shutil
-from utils import make_validation_dataset, PytorchLike_LabeledImageDataset
+from utils import make_validation_dataset, PytorchLike_LabeledImageDataset, Classifier
 import datetime
 
 if __name__ == '__main__':
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epoch', help='the number of epoch, defalut value is 100',
                         type=int, default=100)
     parser.add_argument('-bs', '--batch_size', help='batch size. defalut value is 128',
-                        type=int, default=128)
+                        type=int, default=64)
     parser.add_argument('-vs', '--val_size', help='validation dataset size. defalut value is 0.15',
                         type=float, default=0.15)
     parser.add_argument('-g', '--gpu', help='specify gpu by this number. defalut value is 0,'
@@ -53,10 +53,6 @@ if __name__ == '__main__':
     number = args.number  # number of experiments
     out = pathlib.Path("result_{0}/result_{0}_{1}".format(number, seed))
 
-    # 引数の書き出し
-    with open(out / "args.text", "w") as f:
-        f.write(str(args))
-
     # make directory
     pre = pathlib.Path(out.parts[0])
     for i, path in enumerate(out.parts):
@@ -66,6 +62,9 @@ if __name__ == '__main__':
         if not pre.exists():
             pre.mkdir()
         pre = path
+    # 引数の書き出し
+    with open(out / "args.text", "w") as f:
+        f.write(str(args))
 
     print('GPU: {}'.format(gpu))
     print('# Minibatch-size: {}'.format(batch_size))
@@ -88,23 +87,23 @@ if __name__ == '__main__':
         ]
         train_param_list = [
             {},
-            {"size": 224}
+            {"size": (224, 224)}
         ]
         val_transform_list = [
             transforms.resize,
             transforms.center_crop
         ]
         val_param_list = [
-            {"size": 256},
-            {"size": 224}
+            {"size": (256, 256)},
+            {"size": (224, 224)}
         ]
         test_transform_list = [
             transforms.resize,
             transforms.center_crop
         ]
         test_param_list = [
-            {"size": 256},
-            {"size": 224}
+            {"size": (256, 256)},
+            {"size": (224, 224)}
         ]
         train_datasets = PytorchLike_LabeledImageDataset(
             dir_path=train_dir_path, transform_list=train_transform_list, param_list=train_param_list)
@@ -113,19 +112,27 @@ if __name__ == '__main__':
         test_datasets = PytorchLike_LabeledImageDataset(
             dir_path=test_dir_path, transform_list=test_transform_list, param_list=test_param_list)
 
+        print("Train Dataset Size:", len(train_datasets))
+        print("Validation Dataset Size:", len(val_datasets))
+        print("Test Dataset Size:", len(test_datasets), end="\n\n")
+
         # make iterator
         train_iter = chainer.iterators.SerialIterator(
             train_datasets, batch_size)
+        val_iter = chainer.iterators.SerialIterator(
+            val_datasets, batch_size, repeat=False, shuffle=False
+        )
         test_iter = chainer.iterators.SerialIterator(
             test_datasets, batch_size, repeat=False, shuffle=False)
 
         # build model
         model = chainer.links.VGG16Layers()
         num_ftrs = model.fc8.out_size
-        model.fc8 = L.Linear(in_size=None, out_size=101,
-                             initialW=initializers.Normal(scale=0.02),
-                             initial_bias=initializers.Normal(scale=0.02))
-        model = L.Classifier(model)
+        # model.fc8 = L.Linear(in_size=None, out_size=101,
+        #                      initialW=initializers.Normal(scale=0.02),
+        #                      initial_bias=initializers.Normal(scale=0.02))
+        model = Classifier(model)
+        # model = L.Classifier(model)
 
         if gpu >= 0:
             # Make a specified GPU current
@@ -147,11 +154,12 @@ if __name__ == '__main__':
             filename='snapshot_epoch-{.updater.epoch}'))
         trainer.extend(extensions.snapshot_object(
             model.predictor, filename='model_epoch-{.updater.epoch}'))
-        trainer.extend(extensions.Evaluator(test_iter, model, device=gpu))
+        trainer.extend(extensions.Evaluator(val_iter, model, device=gpu))
         trainer.extend(extensions.PrintReport(
             ['epoch', 'main/loss', 'main/accuracy', 'validation/main/loss', 'validation/main/accuracy', 'elapsed_time']))
         trainer.extend(extensions.PlotReport(
             ['main/loss', 'validation/main/loss'], x_key='epoch', file_name='loss.png'))
+        trainer.extend(extensions.ProgressBar(update_interval=20))
         trainer.extend(extensions.PlotReport(
             ['main/accuracy', 'validation/main/accuracy'], x_key='epoch', file_name='accuracy.png'))
         trainer.extend(extensions.dump_graph('main/loss'))
