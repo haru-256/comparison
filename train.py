@@ -128,16 +128,16 @@ if __name__ == '__main__':
     # trainer.extend(
     #     extensions.snapshot_object(dis, 'dis_epoch_{.updater.epoch}.npz'),
     #     trigger=snapshot_interval)
-    trainer.extend(extensions.LogReport())
-    trainer.extend(
-        extensions.PrintReport([
-            'epoch',
-            'iteration',
-            'gen/loss',
-            'critic/loss',
-            'elapsed_time'
-        ]),
-        trigger=display_interval)
+    # trainer.extend(extensions.LogReport())
+    # trainer.extend(
+    #     extensions.PrintReport([
+    #         'epoch',
+    #         'iteration',
+    #         'gen/loss',
+    #         'critic/loss',
+    #         'elapsed_time'
+    #     ]),
+    #     trigger=display_interval)
     trainer.extend(extensions.ProgressBar(update_interval=100))
     # trainer.extend(
     #     extensions.PlotReport(
