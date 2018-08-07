@@ -1,14 +1,15 @@
 import chainer
 from chainer import training
 from chainer.training import extensions
-from generator import Generator
-from utils import out_generated_image
+# from utils import out_generated_image
+from wgan_model import Critic, Generator
+from updater import WGANUpdater
 import argparse
 import pathlib
-import matplotlib as mpl
-mpl.use("Agg")
-import matplotlib.pyplot as plt
-plt.style.use("ggplot")
+# import matplotlib as mpl
+# mpl.use("Agg")
+# import matplotlib.pyplot as plt
+# plt.style.use("ggplot")
 import datetime
 
 if __name__ == '__main__':
@@ -16,7 +17,7 @@ if __name__ == '__main__':
     # パーサーを作る
     parser = argparse.ArgumentParser(
         prog='train',  # プログラム名
-        usage='train DCGAN',  # プログラムの利用方法
+        usage='python trtain.py',  # プログラムの利用方法
         description='description',  # 引数のヘルプの前に表示
         epilog='end',  # 引数のヘルプの後で表示
         add_help=True,  # -h/–help オプションの追加
@@ -35,14 +36,16 @@ if __name__ == '__main__':
                         type=int, default=128)
     parser.add_argument('-g', '--gpu', help='specify gpu by this number. defalut value is 0',
                         choices=[-1, 0, 1], type=int, default=0)
-    parser.add_argument('-dis', '--discriminator',
-                        help='specify discriminator by this number. any of following;'
-                        ' 0: original, 1: minibatch discriminatio, 2: feature matching, 3: Global Average Pooling. defalut value is 0',
-                        choices=[0, 1, 2, 3], type=int, default=0)
-    parser.add_argument('-ts', '--tensor_shape',
-                        help='specify Tensor shape by this numbers. first args denotes to B, seconds to C.'
-                        ' defalut value are B:32, C:8',
-                        type=int, default=[32, 8], nargs=2)
+    parser.add_argument('-nc', '--n_critic',
+                        help='specify number of iteretion of critic by this number.'
+                        ' defalut value is 5',
+                        type=int, default=5)
+    parser.add_argument('-c_l', '--clip_lower',
+                        help='specify lower of clip range by this number.',
+                        type=float, default=-0.01)
+    parser.add_argument('-c_u', '--clip_upper',
+                        help='specify upper of clip range by this number.',
+                        type=float, default=0.01)
     parser.add_argument('-V', '--version', version='%(prog)s 1.0.0',
                         action='version',
                         default=False)
@@ -73,35 +76,9 @@ if __name__ == '__main__':
     print('# epoch: {}'.format(epoch))
     print('# out: {}'.format(out))
 
-    # import discrimination
-    if args.discriminator == 0:
-        print("# Original Discriminator")
-        from discriminator import Discriminator
-        from updater import DCGANUpdater
-        dis = Discriminator()
-    elif args.discriminator == 1:
-        print("# Discriminator applied Minibatch Discrimination")
-        print('# Tensor shape is A x {0} x {1}'.format(
-            args.tensor_shape[0], args.tensor_shape[1]))
-        from discriminator_md import Discriminator
-        from updater import DCGANUpdater
-        dis = Discriminator(B=args.tensor_shape[0], C=args.tensor_shape[1])
-    elif args.discriminator == 2:
-        print("# Discriminator applied matching")
-        from discriminator_fm import Discriminator
-        from updater_fm import DCGANUpdater
-        dis = Discriminator()
-    elif args.discriminator == 3:
-        print("# Discriminator applied GAP")
-        from discriminator_gap import Discriminator
-        from updater import DCGANUpdater
-        dis = Discriminator()
-
-    print('')
-
     # Set up a neural network to train
-    gen = Generator(n_hidden=n_hidden)
-    dis = Discriminator()
+    gen = Generator(n_hidden=n_hidden, nobias=False)
+    dis = Critic(nobias=False)
 
     if gpu >= 0:
         # Make a specified GPU current
@@ -125,13 +102,15 @@ if __name__ == '__main__':
     print("# Data size: {}".format(len(dataset)), end="\n\n")
 
     # Set up a trainer
-    updater = DCGANUpdater(
+    updater = WGANUpdater(
         models=(gen, dis),
         iterator=train_iter,
         optimizer={
             'gen': opt_gen,
-            'dis': opt_dis
+            'critic': opt_dis
         },
+        n_critic=args.n_critic,
+        clip_range=[args.clip_lower, args.clip_upper],
         device=gpu)
     trainer = training.Trainer(updater, (epoch, 'epoch'), out=out)
 
@@ -149,13 +128,14 @@ if __name__ == '__main__':
     # trainer.extend(
     #     extensions.snapshot_object(dis, 'dis_epoch_{.updater.epoch}.npz'),
     #     trigger=snapshot_interval)
-    # trainer.extend(extensions.LogReport())
+    trainer.extend(extensions.LogReport())
     trainer.extend(
         extensions.PrintReport([
             'epoch',
             'iteration',
             'gen/loss',
-            'dis/loss',
+            'critic/loss',
+            'elapsed_time'
         ]),
         trigger=display_interval)
     trainer.extend(extensions.ProgressBar(update_interval=100))
